@@ -1,0 +1,53 @@
+#Import selenium, webdriver
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+#Chạy Chrome Driver
+chrome_options = Options()
+chrome_options.add_argument("--incognito")
+chrome_options.add_argument("--window-size=1920x1080")
+#Truy cập Web chứa dữ liệu
+driver = webdriver.Chrome()
+driver.get("https://finance.yahoo.com/quote/CL%3DF/history/?guccounter=1&guce_referrer=aHR0cHM6Ly93d3cuZ29vZ2xlLmNvbS8&guce_referrer_sig=AQAAAFV0h5Dw0MRFpqmlVgv3aZjpMImZAyIbty1luXX-hwTf-6pzuAV8YrmZRVhjncL1Qgv9sGsI9mumFCK4ccMk6yIIWCjzlhKfc-KInjG7GblT9P-uI3mIrDpTSQqxxDavu-CLzHyxhhhowIePe4EIICpFKeWKYO9aWzH_8dsQkZ8p&period1=1411862400&period2=1727536499")
+#Đọc và tách dữ liệu theo yêu cầu
+table = driver.find_element(By.TAG_NAME, 'table')
+table.text
+table.text.split('\n')
+# Xuất file dữ liệu
+data = table.text.split('\n')
+import csv
+rows = [row.split() for row in data]
+with open('output.csv', 'w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerows(rows)
+# Đổi loại dữ liệu
+from datetime import datetime
+df['Date'] = df['Date'].apply(lambda x: datetime.strptime(x, "%b %d %Y"))
+df = df[['Date','Open']]
+df = df.sort_values(by= 'Date')
+# Hệ số d của mô hình
+from statsmodels.tsa.stattools import adfuller
+def adfuller_test(Open):
+    result = adfuller(Open)
+    labels = ['ADF Test Statistic','p-value']
+    print('ADF Statistic:', adf_result[0])
+    print('p-value:', adf_result[1])
+    if adf_result[1] <= 0.05:
+        print("Data is stationary")
+    else:
+        print("Data is non-stationary")
+adfuller_test(df['Open'])
+df['First Difference'] = df['Open'] - df['Open'].shift(1)
+adfuller_test(df['First Difference'].dropna())
+# Hệ số p, q
+plot_acf(df['Open'].diff().dropna())
+plot_pacf(df['Open'].diff().dropna())
+plt.show()
+# Mô hình từ Auto Machine Learning
+from pmdarima.arima import auto_arima
+model = auto_arima(df['Open'], seasonal=False, 
+                   m=1, trace=True, error_action='ignore',
+                    suppress_warnings=True, stepwise=True)
